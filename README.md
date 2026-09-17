@@ -54,7 +54,7 @@ upstream identity/JWT-mapping policy, or by the agent for testing):
 
 A caller is **entitled to see sensitive fields** iff:
 
-- their clearance is in `clearedLevels` (comma-separated), **and**
+- their clearance is in `clearedLevels` (multi-select), **and**
 - if `allowedPurposes` is non-empty, their purpose is in it too.
 
 The decision is **fail-closed**: absent or insufficient claims withhold *every*
@@ -125,7 +125,7 @@ marked Confidential); nothing was configured per field. Run:
 | `clearanceClaim` | string | _unset_ | Optional JWT claim name for the caller's clearance; when set + present it is used instead of `clearanceHeader`. Needs an upstream JWT Validation policy. |
 | `purposeHeader` | string | `x-dp-purpose` | Request header carrying the caller's declared purpose. |
 | `purposeClaim` | string | _unset_ | Optional JWT claim name for the caller's purpose; when set + present it is used instead of `purposeHeader`. Needs an upstream JWT Validation policy. |
-| `clearedLevels` | string | `restricted` | Comma-separated clearance values entitled to see sensitive fields. |
+| `clearedLevels` | array (multi-select) | `[restricted]` | Clearance values entitled to see sensitive fields (`public` / `internal` / `confidential` / `restricted`). |
 | `allowedPurposes` | string | `""` | Comma-separated purposes entitled to see sensitive fields. Empty = purpose not checked. |
 | `maskMode` | enum | `mask` | How a withheld field is rendered (`mask` / `nullify` / `drop`). |
 | `maskToken` | string | `***` | Replacement value when `maskMode = mask`. |
@@ -170,9 +170,12 @@ make build-asset-files && cargo build --target wasm32-wasip1 --release
 cargo test --lib            # 11 pure unit tests
 make release
 ```
-Published at **1.1.0** (adds opt-in JWT-claims sourcing for clearance /
+Published at **1.2.0** (1.1.0 added opt-in JWT-claims sourcing for clearance /
 purpose / schema id — see "Sourcing caller claims from a JWT"; header mode
-remains the default). Requires **PDK 1.10**.
+remains the default. **1.2.0 turns `sensitiveLevels` and `clearedLevels` into
+multi-select dropdowns** — `type: array` of `[public, internal, confidential,
+restricted]` in API Manager, instead of a comma-separated string). Requires
+**PDK 1.10**.
 
 ---
 

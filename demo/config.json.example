@@ -8,7 +8,7 @@
   "sensitiveMarker": "confidential",
   "clearanceHeader": "x-dp-clearance",
   "purposeHeader": "x-dp-purpose",
-  "clearedLevels": "restricted",
+  "clearedLevels": ["restricted"],
   "allowedPurposes": "fraud-detection",
   "maskMode": "mask",
   "maskToken": "***",

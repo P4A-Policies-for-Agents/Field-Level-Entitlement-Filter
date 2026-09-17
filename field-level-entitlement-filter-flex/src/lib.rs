@@ -45,7 +45,7 @@ use serde::Deserialize;
 use serde_json::{json, Map, Value};
 
 use crate::cdgc::{nonce_from_time, CachedFieldMap, RefreshLock};
-use crate::entitlement::{apply, parse_csv_set, plan, CallerContext, EntitlementPolicy, GovernedField, MaskMode};
+use crate::entitlement::{apply, parse_csv_set, parse_level_set, plan, CallerContext, EntitlementPolicy, GovernedField, MaskMode};
 use crate::generated::config::Config;
 
 const FIELD_CACHE_NAMESPACE: &str = "fef-fieldmap";
@@ -121,7 +121,7 @@ fn field_map_store_ttl_ms(config: &Config) -> u32 {
 }
 fn entitlement_policy(config: &Config) -> EntitlementPolicy {
     EntitlementPolicy {
-        cleared_levels: parse_csv_set(config.cleared_levels.as_deref().unwrap_or(DEFAULT_CLEARED_LEVELS)),
+        cleared_levels: parse_level_set(config.cleared_levels.as_deref(), DEFAULT_CLEARED_LEVELS),
         allowed_purposes: parse_csv_set(config.allowed_purposes.as_deref().unwrap_or("")),
         mask_mode: MaskMode::parse(config.mask_mode.as_deref().unwrap_or("mask")),
         mask_token: config.mask_token.clone().unwrap_or_else(|| DEFAULT_MASK_TOKEN.to_string()),
@@ -206,7 +206,7 @@ async fn fetch_field_map(
     let start = clock.now();
     let (jwt, org) = cdgc_auth(client, config, clock, start).await?;
     let sens_marker = config.sensitive_marker.as_deref().unwrap_or(DEFAULT_SENSITIVE_MARKER).to_lowercase();
-    let sens_levels = parse_csv_set(config.sensitive_levels.as_deref().unwrap_or(DEFAULT_SENSITIVE_LEVELS));
+    let sens_levels = parse_level_set(config.sensitive_levels.as_deref(), DEFAULT_SENSITIVE_LEVELS);
 
     // 1. Resolve the schema asset → location + identity.
     let files = cdgc_search(client, config, clock, start, &jwt, &org, &json!({

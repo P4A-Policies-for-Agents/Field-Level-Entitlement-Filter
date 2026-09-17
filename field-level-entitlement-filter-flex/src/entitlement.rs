@@ -74,6 +74,20 @@ pub fn parse_csv_set(raw: &str) -> HashSet<String> {
         .collect()
 }
 
+/// Parse a multi-select array config value into a set of lowercased, trimmed
+/// tokens. When the property is unset (`None`), fall back to the comma-separated
+/// `default_csv`. An explicit empty selection yields an empty set.
+pub fn parse_level_set(values: Option<&[String]>, default_csv: &str) -> HashSet<String> {
+    match values {
+        Some(v) => v
+            .iter()
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect(),
+        None => parse_csv_set(default_csv),
+    }
+}
+
 fn norm(v: &Option<String>) -> Option<String> {
     v.as_deref().map(|s| s.trim().to_lowercase()).filter(|s| !s.is_empty())
 }

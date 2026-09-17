@@ -22,7 +22,7 @@ pub struct Config {
     #[serde(alias = "clearanceHeader")]
     pub clearance_header: Option<String>,
     #[serde(alias = "clearedLevels")]
-    pub cleared_levels: Option<String>,
+    pub cleared_levels: Option<Vec<String>>,
     #[serde(alias = "distributed")]
     pub distributed: Option<bool>,
     #[serde(alias = "failOpenOnCdgcError")]
@@ -46,7 +46,7 @@ pub struct Config {
     #[serde(alias = "schemaIdHeader")]
     pub schema_id_header: Option<String>,
     #[serde(alias = "sensitiveLevels")]
-    pub sensitive_levels: Option<String>,
+    pub sensitive_levels: Option<Vec<String>>,
     #[serde(alias = "sensitiveMarker")]
     pub sensitive_marker: Option<String>,
     #[serde(alias = "timeout")]
