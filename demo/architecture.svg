@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="820" viewBox="0 0 1240 820" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 z" fill="#444"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 z" fill="#188038"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 z" fill="#7627bb"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1240" height="820" fill="#fbfbfd"/>
+  <text x="40" y="46" font-size="26" font-weight="bold" fill="#202124">Field-Level Entitlement Filter — two-caller demo</text>
+  <text x="40" y="72" font-size="15" fill="#5f6368">Same tool, same upstream record, same endpoint. The gateway projects each field per the caller's clearance + purpose;</text>
+  <text x="40" y="93" font-size="15" fill="#5f6368">which fields are sensitive is derived live from Informatica CDGC — nothing is configured per field.</text>
+
+  <!-- CDGC -->
+  <rect x="470" y="110" width="330" height="118" rx="12" fill="#f3e8fd" stroke="#7627bb" stroke-width="2"/>
+  <text x="635" y="138" font-size="17" font-weight="bold" fill="#4a148c" text-anchor="middle">Informatica CDGC</text>
+  <text x="635" y="160" font-size="12.5" fill="#4a148c" text-anchor="middle">schema asset → FlatField columns → Business Terms</text>
+  <text x="635" y="182" font-size="12.5" fill="#4a148c" text-anchor="middle">Business Term "Security Level" (securityClassification)</text>
+  <text x="635" y="206" font-size="12.5" font-weight="bold" fill="#4a148c" text-anchor="middle">unit_cost → Confidential  ·  list_price → Confidential</text>
+
+  <!-- CDGC to gateway arrow -->
+  <path d="M635,228 L635,300" stroke="#7627bb" stroke-width="2" fill="none" marker-end="url(#arrowPurple)" stroke-dasharray="6 4"/>
+  <text x="648" y="268" font-size="12" fill="#7627bb">derive sensitivity map</text>
+  <text x="648" y="285" font-size="11" fill="#7627bb">(Login→JWT→ccgf-searchv2, cached 24h)</text>
+
+  <!-- Callers -->
+  <rect x="40" y="330" width="250" height="96" rx="12" fill="#e8f0fe" stroke="#1a73e8" stroke-width="2"/>
+  <text x="60" y="360" font-size="17" font-weight="bold" fill="#174ea6">Caller A — Analyst</text>
+  <text x="60" y="386" font-size="13" fill="#174ea6">x-dp-clearance: internal</text>
+  <text x="60" y="408" font-size="13" fill="#174ea6">x-dp-purpose: analytics</text>
+
+  <rect x="40" y="470" width="250" height="96" rx="12" fill="#e8f0fe" stroke="#1a73e8" stroke-width="2"/>
+  <text x="60" y="500" font-size="17" font-weight="bold" fill="#174ea6">Caller B — Fraud investigator</text>
+  <text x="60" y="526" font-size="13" fill="#174ea6">x-dp-clearance: restricted</text>
+  <text x="60" y="548" font-size="13" fill="#174ea6">x-dp-purpose: fraud-detection</text>
+
+  <!-- Gateway -->
+  <rect x="470" y="300" width="330" height="266" rx="12" fill="#fff4e5" stroke="#e8710a" stroke-width="2.5"/>
+  <text x="635" y="328" font-size="17" font-weight="bold" fill="#b45309" text-anchor="middle">MuleSoft Omni / Flex Gateway</text>
+  <rect x="500" y="346" width="270" height="196" rx="10" fill="#ffffff" stroke="#e8710a" stroke-width="1.5"/>
+  <text x="635" y="372" font-size="15" font-weight="bold" fill="#b45309" text-anchor="middle">Field-Level Entitlement Filter</text>
+  <line x1="516" y1="386" x2="754" y2="386" stroke="#f0c99a" stroke-width="1"/>
+  <text x="516" y="410" font-size="12.5" fill="#5f4200">1 · read caller headers (clearance/purpose)</text>
+  <text x="516" y="432" font-size="12.5" fill="#5f4200">2 · look up per-field sensitivity (from CDGC)</text>
+  <text x="516" y="454" font-size="12.5" fill="#5f4200">3 · entitled iff clearance ∈ clearedLevels</text>
+  <text x="532" y="472" font-size="12.5" fill="#5f4200">and purpose ∈ allowedPurposes (fail-closed)</text>
+  <text x="516" y="496" font-size="12.5" fill="#5f4200">4 · mask sensitive fields caller can't see</text>
+  <text x="516" y="524" font-size="12" font-style="italic" fill="#8a6d3b">clearedLevels=restricted · allowedPurposes=fraud-detection</text>
+
+  <!-- Upstream -->
+  <rect x="960" y="360" width="240" height="150" rx="12" fill="#e6f4ea" stroke="#188038" stroke-width="2"/>
+  <text x="1080" y="392" font-size="16" font-weight="bold" fill="#0d652d" text-anchor="middle">Upstream data product</text>
+  <text x="1080" y="414" font-size="12.5" fill="#0d652d" text-anchor="middle">MCP tool get_products (mock)</text>
+  <text x="1080" y="440" font-size="12" fill="#0d652d" text-anchor="middle">returns the SAME full record</text>
+  <text x="1080" y="460" font-size="12" fill="#0d652d" text-anchor="middle">to every caller, including</text>
+  <text x="1080" y="482" font-size="12.5" font-weight="bold" fill="#0d652d" text-anchor="middle">unit_cost = 42.50 · list_price = 99.99</text>
+
+  <!-- request arrows callers -> gateway -->
+  <path d="M290,372 L470,372" stroke="#444" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="330" y="362" font-size="11.5" fill="#444">request + headers</text>
+  <path d="M290,512 L470,512" stroke="#444" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="330" y="502" font-size="11.5" fill="#444">request + headers</text>
+
+  <!-- gateway <-> upstream -->
+  <path d="M800,398 L960,398" stroke="#188038" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+  <text x="820" y="388" font-size="11.5" fill="#188038">tools/call get_products</text>
+  <path d="M960,470 L800,470" stroke="#188038" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+  <text x="828" y="488" font-size="11.5" fill="#188038">same full record</text>
+
+  <!-- response outcomes -->
+  <rect x="330" y="620" width="360" height="150" rx="10" fill="#fce8e6" stroke="#c5221f" stroke-width="1.8"/>
+  <text x="350" y="648" font-size="15" font-weight="bold" fill="#a50e0e">Response to Analyst — not entitled</text>
+  <text x="350" y="674" font-size="13" fill="#a50e0e">x-entitlement-filtered: 2</text>
+  <text x="350" y="698" font-size="13" fill="#a50e0e">unit_cost: ***   list_price: ***  (masked)</text>
+  <text x="350" y="722" font-size="12" fill="#a50e0e">other 9 fields pass through unchanged</text>
+  <text x="350" y="748" font-size="11.5" font-style="italic" fill="#8a1c1a">_entitlement: { entitled:false, withheld:[list_price,unit_cost] }</text>
+
+  <rect x="720" y="620" width="380" height="150" rx="10" fill="#e6f4ea" stroke="#188038" stroke-width="1.8"/>
+  <text x="740" y="648" font-size="15" font-weight="bold" fill="#0d652d">Response to Fraud investigator — entitled</text>
+  <text x="740" y="674" font-size="13" fill="#0d652d">x-entitlement-filtered: 0</text>
+  <text x="740" y="698" font-size="13" fill="#0d652d">unit_cost: 42.50   list_price: 99.99  (visible)</text>
+  <text x="740" y="722" font-size="12" fill="#0d652d">full record returned</text>
+  <text x="740" y="748" font-size="11.5" font-style="italic" fill="#0b5a28">_entitlement: { entitled:true, withheld:[] }</text>
+
+  <!-- response arrows gateway -> outcomes -->
+  <path d="M560,566 L525,620" stroke="#c5221f" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M700,566 L840,620" stroke="#188038" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+
+  <text x="40" y="800" font-size="11.5" fill="#80868b">Purple dashed = catalog-driven sensitivity (CDGC) · black = caller request · green = upstream data path. Nothing is configured per field; mark a column Confidential in CDGC and it is protected on the next cache refresh.</text>
+</svg>
