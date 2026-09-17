@@ -5,18 +5,19 @@ A2D MCP tools. Per-field sensitivity is derived from CDGC, so you need a real ID
 tenant with a **scanned schema asset** whose columns are linked to Business Terms
 (one of which is marked with the `sensitiveMarker`, e.g. "Confidential").
 
-## Live IDs used for this build (org `030e0aac-30d9-460f-9234-428c16a123c4`, env Sandbox `5933e3e7-…`)
+## Things this build wires up (fill each with your own tenant's values)
 
 | Thing | Value |
 |---|---|
-| A2D mock MCP server | `f2a18790-2be4-4f8b-bc2d-0db85a052d88` |
-| Mock URL | `https://www.a2d-ai.com/api/platform/f2a18790-2be4-4f8b-bc2d-0db85a052d88/mcp` |
+| Anypoint org / env | `<orgId>` / Sandbox `<envId>` |
+| A2D mock MCP server | `<mockServerId>` |
+| Mock URL | `https://www.a2d-ai.com/api/platform/<mockServerId>/mcp` |
 | Exchange asset | `product-catalog-entitlement/1.0.0` (type `mcp`) |
-| API Manager instance | `21180385` (label `entitlement-filter-demo`) |
-| Flex gateway target | `6a42db0e-fe38-4db5-8e73-6ec2da8e69de` (`omni-gw-small`, v1.13.5) |
-| Applied policy id | `9263610` (`field-level-entitlement-filter` 1.0.0) |
-| Governed schema asset | `cb2345f7-d54f-4d8b-ba76-9b78b14576c4` (`dim_product.csv`) |
-| Governed endpoint | `https://omni-gw-small-fqj8wl.5sc6y6-1.usa-e2.cloudhub.io/entitlement-filter-demo/mcp` |
+| API Manager instance | `<apiInstanceId>` (label `entitlement-filter-demo`) |
+| Flex gateway target | `<gatewayId>` (a gateway with a public URL, e.g. v1.13.5) |
+| Applied policy id | `<policyId>` (`field-level-entitlement-filter`) |
+| Governed schema asset | `<schemaId>` (`dim_product.csv`) |
+| Governed endpoint | `https://<gatewayPublicHost>/entitlement-filter-demo/mcp` |
 
 ## 0. Find the schema-asset id (CDGC search API)
 

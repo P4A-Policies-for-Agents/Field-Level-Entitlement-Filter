@@ -10,7 +10,7 @@ metadata:
       response field for the caller — masking, nulling, or dropping sensitive
       fields the caller's clearance and declared purpose don't entitle them to.
     metadata/capabilities/injectionPoint: inbound
-    metadata/capabilities/assetTypes: mcp,a2a,a2a_v1
+    metadata/capabilities/assetTypes: mcp,rest,http
     metadata/interfaceScope: api,resource
 spec:
   extends:

@@ -11,8 +11,12 @@ decided at the gateway from *who they are*: a cleared fraud investigator sees
 `unit_cost`; an analyst gets it masked. Nothing is configured per field — the field
 set and which fields are sensitive come from CDGC.
 
-Built with the PDK, Rust → `wasm32-wasip1`, split-model. Works on **MCP**
-(`tools/call`), **A2A**, and **REST/HTTP** JSON responses.
+Built with the PDK, Rust → `wasm32-wasip1`, split-model. Applies to **MCP**
+(`tools/call`) and **REST/HTTP APIs** (`assetTypes: mcp,rest,http`) — both bind to
+a data-product schema, so per-field governance maps cleanly. (A2A was dropped:
+agents aren't bound to a schema, so field-level derivation doesn't apply.) The
+policy unwraps the MCP JSON-RPC envelope when present, and otherwise treats the
+REST response body as the payload directly.
 
 ---
 
@@ -69,8 +73,8 @@ sensitive fields are withheld for this caller) and rewrites the payload with an
 
 ```json
 "_entitlement": { "entitled": false, "clearance": "internal", "purpose": "analytics",
-  "mode": "mask", "withheld": ["unit_cost"], "assetId": "cb2345f7-…",
-  "name": "dim_product.csv", "externalId": "b423cc70-…", "source": "cdgc" }
+  "mode": "mask", "withheld": ["unit_cost"], "assetId": "<schemaId>",
+  "name": "dim_product.csv", "externalId": "<externalId>", "source": "cdgc" }
 ```
 
 The policy is **fail-open only on its own CDGC outage** (`failOpenOnCdgcError`,

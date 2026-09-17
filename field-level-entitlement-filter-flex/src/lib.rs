@@ -409,6 +409,14 @@ fn nav_mut<'a>(root: &'a mut Value, path: &str) -> Option<&'a mut Value> {
     }
     Some(cur)
 }
+/// Where the business payload lives in the response, so we can write it back.
+/// MCP/A2A wrap it in a JSON-RPC envelope; a REST API returns it directly.
+enum Place {
+    Structured,     // result.structuredContent (MCP)
+    Content(usize), // result.content[i].text as embedded JSON (MCP)
+    Rest,           // the response body *is* the payload (REST/HTTP API)
+}
+
 /// True if `path` in the payload points at a record (object) or an array of them.
 fn has_records(payload: &Value, path: &str) -> bool {
     match nav(payload, path) {
@@ -490,33 +498,43 @@ async fn response_filter<S: DataStorage>(
         Some(v) => v,
         None => return,
     };
-    // Only govern successful tool results.
-    if rpc.get("result").is_none() {
-        return;
-    }
-
-    // Extract the business payload: structuredContent, else the first JSON content[].text.
-    let result = rpc.get("result").unwrap();
-    let (mut payload, from_structured, content_idx) = if let Some(sc) = result.get("structuredContent") {
-        (sc.clone(), true, None)
-    } else if let Some(arr) = result.get("content").and_then(Value::as_array) {
-        let mut found = None;
-        for (i, item) in arr.iter().enumerate() {
-            if item.get("type").and_then(Value::as_str) == Some("text") {
-                if let Some(t) = item.get("text").and_then(Value::as_str) {
-                    if let Ok(v) = serde_json::from_str::<Value>(t) {
-                        found = Some((v, i));
-                        break;
+    // MCP/A2A wrap the payload in a JSON-RPC envelope; a REST API returns the JSON
+    // payload directly. Detect which, extract the payload, and remember where to
+    // write it back.
+    let is_rpc = is_sse
+        || rpc.get("jsonrpc").is_some()
+        || (rpc.get("result").is_some() && rpc.get("id").is_some());
+    let (mut payload, place) = if is_rpc {
+        // Only govern successful tool results.
+        let result = match rpc.get("result") {
+            Some(r) => r,
+            None => return,
+        };
+        // structuredContent, else the first JSON content[].text.
+        if let Some(sc) = result.get("structuredContent") {
+            (sc.clone(), Place::Structured)
+        } else if let Some(arr) = result.get("content").and_then(Value::as_array) {
+            let mut found = None;
+            for (i, item) in arr.iter().enumerate() {
+                if item.get("type").and_then(Value::as_str) == Some("text") {
+                    if let Some(t) = item.get("text").and_then(Value::as_str) {
+                        if let Ok(v) = serde_json::from_str::<Value>(t) {
+                            found = Some((v, i));
+                            break;
+                        }
                     }
                 }
             }
-        }
-        match found {
-            Some((v, i)) => (v, false, Some(i)),
-            None => return,
+            match found {
+                Some((v, i)) => (v, Place::Content(i)),
+                None => return,
+            }
+        } else {
+            return;
         }
     } else {
-        return;
+        // REST / HTTP API: the whole response body is the payload.
+        (rpc.clone(), Place::Rest)
     };
 
     if !has_records(&payload, records_path) {
@@ -566,21 +584,28 @@ async fn response_filter<S: DataStorage>(
     }
 
     // Write the payload back where we found it, then reframe.
-    if from_structured {
-        if let Some(r) = rpc.get_mut("result") {
-            if let Some(obj) = r.as_object_mut() {
-                obj.insert("structuredContent".to_string(), payload.clone());
-                // keep the text mirror consistent if present
-                if let Some(arr) = obj.get_mut("content").and_then(Value::as_array_mut) {
-                    if let Some(first) = arr.iter_mut().find(|i| i.get("type").and_then(Value::as_str) == Some("text")) {
-                        first["text"] = Value::String(payload.to_string());
+    match place {
+        Place::Structured => {
+            if let Some(r) = rpc.get_mut("result") {
+                if let Some(obj) = r.as_object_mut() {
+                    obj.insert("structuredContent".to_string(), payload.clone());
+                    // keep the text mirror consistent if present
+                    if let Some(arr) = obj.get_mut("content").and_then(Value::as_array_mut) {
+                        if let Some(first) = arr.iter_mut().find(|i| i.get("type").and_then(Value::as_str) == Some("text")) {
+                            first["text"] = Value::String(payload.to_string());
+                        }
                     }
                 }
             }
         }
-    } else if let Some(i) = content_idx {
-        if let Some(item) = rpc.pointer_mut(&format!("/result/content/{i}/text")) {
-            *item = Value::String(payload.to_string());
+        Place::Content(i) => {
+            if let Some(item) = rpc.pointer_mut(&format!("/result/content/{i}/text")) {
+                *item = Value::String(payload.to_string());
+            }
+        }
+        Place::Rest => {
+            // REST: the response body is the payload itself (no envelope to reframe).
+            rpc = payload.clone();
         }
     }
 

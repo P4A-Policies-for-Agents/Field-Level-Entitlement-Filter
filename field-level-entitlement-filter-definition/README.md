@@ -2,7 +2,7 @@
 
 The Exchange **policy definition** (schema) half of the split-model
 [Field-Level Entitlement Filter](../README.md) policy: `gcl.yaml` (config schema,
-category `Security`, `assetTypes: mcp,a2a,a2a_v1`), `exchange.json` (GAV), and the
+category `Security`, `assetTypes: mcp,rest,http`), `exchange.json` (GAV), and the
 publish `Makefile`.
 
 ```bash

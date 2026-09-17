@@ -7,7 +7,7 @@ the only catalog input is the one `schemaId`.
 
 ## The sensitivity map (derived live from CDGC — not configured)
 
-On the first call the policy resolves `schemaId = cb2345f7-d54f-4d8b-ba76-9b78b14576c4`
+On the first call the policy resolves `schemaId = <schemaId>` (the CDGC asset id of `dim_product.csv`)
 in CDGC, enumerates the scanned asset's columns, follows each column → Business Term
 link, and builds this map for `dim_product.csv` (then caches it, TTL
 `refreshIntervalSeconds = 86400`):
@@ -61,8 +61,8 @@ Headers: `x-dp-clearance: internal`, `x-dp-purpose: analytics`.
 
 ```json
 { "_entitlement": { "entitled": false, "clearance":"internal", "purpose":"analytics",
-    "mode":"mask", "withheld":["unit_cost"], "assetId":"cb2345f7-…",
-    "name":"dim_product.csv", "externalId":"b423cc70-…", "source":"cdgc" },
+    "mode":"mask", "withheld":["unit_cost"], "assetId":"<schemaId>",
+    "name":"dim_product.csv", "externalId":"<externalId>", "source":"cdgc" },
   "count": 1,
   "products": [ { "brand":"Acme","category":"Kitchen","department":"Home",
     "is_sellable":"true","launch_date":"2025-01-10","lifecycle_state":"active",
@@ -85,8 +85,8 @@ Headers: `x-dp-clearance: restricted`, `x-dp-purpose: fraud-detection`.
 
 ```json
 { "_entitlement": { "entitled": true, "clearance":"restricted", "purpose":"fraud-detection",
-    "mode":"mask", "withheld":[], "assetId":"cb2345f7-…",
-    "name":"dim_product.csv", "externalId":"b423cc70-…", "source":"cdgc" },
+    "mode":"mask", "withheld":[], "assetId":"<schemaId>",
+    "name":"dim_product.csv", "externalId":"<externalId>", "source":"cdgc" },
   "count": 1,
   "products": [ { "…":"…", "unit_cost":"42.50" } ] }
 ```
