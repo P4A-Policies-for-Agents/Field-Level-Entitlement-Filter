@@ -1,0 +1,121 @@
+---
+apiVersion: gateway.mulesoft.com/v1alpha1
+kind: Extension
+metadata:
+  labels:
+    title: Field-Level Entitlement Filter
+    category: Security
+    description: >-
+      Derives per-field sensitivity from Informatica CDGC and projects each
+      response field for the caller — masking, nulling, or dropping sensitive
+      fields the caller's clearance and declared purpose don't entitle them to.
+    metadata/capabilities/injectionPoint: inbound
+    metadata/capabilities/assetTypes: mcp,a2a,a2a_v1
+    metadata/interfaceScope: api,resource
+spec:
+  extends:
+    - name: extension-definition
+      namespace: default
+  properties:
+    cdgcLoginUrl:
+      type: string
+      format: service
+      description: IDMC login base URL, e.g. https://dm-us.informaticacloud.com.
+    cdgcSearchUrl:
+      type: string
+      format: service
+      description: >-
+        CDGC search API base (the cdgc-api host serving ccgf-searchv2), e.g.
+        https://cdgc-api.dm-us.informaticacloud.com.
+    cdgcOrgUsername:
+      type: string
+      description: IDMC read-only service-account username.
+      "@context": { "@characteristics": [security:sensitive] }
+    cdgcOrgPassword:
+      type: string
+      description: IDMC service-account password.
+      "@context": { "@characteristics": [security:sensitive] }
+    schemaId:
+      type: string
+      description: >-
+        CDGC asset id of the scanned schema — a flat file, table, etc. — whose
+        governed columns and linked Business Terms define per-field sensitivity.
+        No per-field configuration.
+    schemaIdHeader:
+      type: string
+      default: x-dp-schema-id
+      description: Optional request header overriding schemaId per request (multi-product).
+    recordsPath:
+      type: string
+      default: ""
+      description: >-
+        "/"-separated path into the tool-result payload to the record(s) whose
+        fields are projected, e.g. "products". Empty = payload root; array = each element.
+    sensitiveMarker:
+      type: string
+      default: confidential
+      description: >-
+        Case-insensitive substring in a field's Business Term description that marks
+        the field sensitive (e.g. a term whose definition says "Confidential: ...").
+    clearanceHeader:
+      type: string
+      default: x-dp-clearance
+      description: >-
+        Request header carrying the caller's clearance level (e.g. from an upstream
+        identity policy or JWT-to-header mapping), matched against clearedLevels.
+    purposeHeader:
+      type: string
+      default: x-dp-purpose
+      description: >-
+        Request header carrying the caller's declared processing purpose (e.g.
+        fraud-detection, analytics), matched against allowedPurposes.
+    clearedLevels:
+      type: string
+      default: restricted
+      description: >-
+        Comma-separated clearance values entitled to see sensitive fields. A caller
+        whose clearance is not in this set is not cleared (fail-closed).
+    allowedPurposes:
+      type: string
+      default: ""
+      description: >-
+        Comma-separated declared purposes entitled to see sensitive fields. Empty =
+        purpose is not checked (clearance alone governs). Non-empty = the caller's
+        purpose must also be in this set.
+    maskMode:
+      type: string
+      enum: [mask, nullify, drop]
+      default: mask
+      description: >-
+        How a withheld sensitive field is rendered — mask (replace value with
+        maskToken), nullify (set to null), or drop (remove the field entirely).
+    maskToken:
+      type: string
+      default: "***"
+      description: Replacement value used when maskMode is "mask".
+    refreshIntervalSeconds:
+      type: integer
+      default: 86400
+      minimum: 30
+      description: Cache TTL for the derived field-sensitivity map before a lazy CDGC refresh.
+    failOpenOnCdgcError:
+      type: boolean
+      default: true
+      description: >-
+        On a transient CDGC error with a cached map, keep enforcing it. With no map
+        at all, pass the response through (never block on the policy's own outage).
+        The caller-entitlement decision itself is always fail-closed.
+    distributed:
+      type: boolean
+      default: false
+      description: Share cached map + refresh lock across replicas (needs shared storage).
+    timeout:
+      type: integer
+      default: 5000
+      description: Per-call CDGC timeout (ms), clamped to a chained refresh budget (~15s).
+  required:
+    - cdgcLoginUrl
+    - cdgcSearchUrl
+    - cdgcOrgUsername
+    - cdgcOrgPassword
+    - schemaId
