@@ -45,6 +45,14 @@ spec:
       type: string
       default: x-dp-schema-id
       description: Optional request header overriding schemaId per request (multi-product).
+    schemaIdClaim:
+      type: string
+      description: >-
+        Optional JWT claim name to read schemaId from. When set and present in the
+        caller's (upstream-validated) Bearer token, the claim wins over schemaIdHeader
+        — so the token binds the caller to a data product and a spoofed header can't
+        redirect it. Unset (default) = header/config only. Requires a JWT Validation
+        policy upstream to verify the token.
     recordsPath:
       type: string
       default: ""
@@ -72,12 +80,26 @@ spec:
       description: >-
         Request header carrying the caller's clearance level (e.g. from an upstream
         identity policy or JWT-to-header mapping), matched against clearedLevels.
+    clearanceClaim:
+      type: string
+      description: >-
+        Optional JWT claim name carrying the caller's clearance level. When set and
+        present in the caller's (upstream-validated) Bearer token, it is used instead
+        of clearanceHeader. Unset (default) = header mode. Requires a JWT Validation
+        policy upstream to verify the token.
     purposeHeader:
       type: string
       default: x-dp-purpose
       description: >-
         Request header carrying the caller's declared processing purpose (e.g.
         fraud-detection, analytics), matched against allowedPurposes.
+    purposeClaim:
+      type: string
+      description: >-
+        Optional JWT claim name carrying the caller's declared purpose. When set and
+        present in the caller's (upstream-validated) Bearer token, it is used instead
+        of purposeHeader. Unset (default) = header mode. Requires a JWT Validation
+        policy upstream to verify the token.
     clearedLevels:
       type: string
       default: restricted

@@ -13,6 +13,11 @@
 //! by the same `format:service` egress + `HttpClient` pattern as the sibling
 //! metadata-injection and conformance-guard policies.
 //!
+//! The caller's clearance and purpose come from request headers by default, or —
+//! when `clearanceClaim`/`purposeClaim` are configured — from claims in the caller's
+//! Bearer JWT (decoded here, verified by an upstream JWT Validation policy). The
+//! schema id can likewise come from `schemaIdClaim`. See `claims`.
+//!
 //! The caller-entitlement decision is **fail-closed**: absent or insufficient claims
 //! withhold every sensitive field. The policy is fail-open only on its own CDGC
 //! outage (no map → pass through), per `failOpenOnCdgcError`.
@@ -23,6 +28,7 @@
 //! rewrites are out of scope.
 
 mod cdgc;
+mod claims;
 mod entitlement;
 mod generated;
 
@@ -428,13 +434,33 @@ fn has_records(payload: &Value, path: &str) -> bool {
 
 async fn request_filter(request_state: RequestState, config: Rc<Config>) -> Flow<Option<Ctx>> {
     let hs = request_state.into_headers_state().await;
+
+    // Opt-in JWT-claims source: only when a *Claim config is set do we decode the
+    // caller's Bearer token. The token is only decoded here — an upstream JWT
+    // Validation policy must verify it. A configured claim wins over the header;
+    // absent config or absent claim falls back to the header (backward compatible).
+    let jwt_claims = if config.schema_id_claim.is_some()
+        || config.clearance_claim.is_some()
+        || config.purpose_claim.is_some()
+    {
+        claims::decode_bearer_claims(hs.handler().header("authorization").as_deref())
+    } else {
+        None
+    };
+    let from_claim = |name: &Option<String>| -> Option<String> {
+        claims::claim_str(jwt_claims.as_ref()?, name.as_deref()?)
+    };
+
     let schema_header = config.schema_id_header.as_deref().unwrap_or("x-dp-schema-id").to_ascii_lowercase();
-    let asset_id = hs.handler().header(&schema_header).filter(|v| !v.trim().is_empty())
+    let asset_id = from_claim(&config.schema_id_claim)
+        .or_else(|| hs.handler().header(&schema_header).filter(|v| !v.trim().is_empty()))
         .unwrap_or_else(|| config.schema_id.clone());
     let clearance_header = config.clearance_header.as_deref().unwrap_or(DEFAULT_CLEARANCE_HEADER).to_ascii_lowercase();
     let purpose_header = config.purpose_header.as_deref().unwrap_or(DEFAULT_PURPOSE_HEADER).to_ascii_lowercase();
-    let clearance = hs.handler().header(&clearance_header).filter(|v| !v.trim().is_empty());
-    let purpose = hs.handler().header(&purpose_header).filter(|v| !v.trim().is_empty());
+    let clearance = from_claim(&config.clearance_claim)
+        .or_else(|| hs.handler().header(&clearance_header).filter(|v| !v.trim().is_empty()));
+    let purpose = from_claim(&config.purpose_claim)
+        .or_else(|| hs.handler().header(&purpose_header).filter(|v| !v.trim().is_empty()));
     let ct = hs.handler().header("content-type").unwrap_or_default();
     if ct.starts_with("application/json") && hs.method().as_str() == "POST" {
         let bs = hs.into_body_state().await;

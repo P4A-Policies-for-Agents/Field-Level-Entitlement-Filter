@@ -118,10 +118,13 @@ marked Confidential); nothing was configured per field. Run:
 | `cdgcOrgUsername` / `cdgcOrgPassword` | string (sensitive) | required | IDMC read-only service account. |
 | `schemaId` | string | required | CDGC asset id of the scanned schema whose columns/terms define sensitivity. |
 | `schemaIdHeader` | string | `x-dp-schema-id` | Per-request schema-asset id override. |
+| `schemaIdClaim` | string | _unset_ | Optional JWT claim name to read `schemaId` from; when set + present it wins over `schemaIdHeader`. Needs an upstream JWT Validation policy. |
 | `recordsPath` | string | `""` | `/`-path to the record(s) projected (`products`); array = each element. |
 | `sensitiveMarker` | string | `confidential` | Case-insensitive substring in a field's term description that marks it sensitive. |
 | `clearanceHeader` | string | `x-dp-clearance` | Request header carrying the caller's clearance level. |
+| `clearanceClaim` | string | _unset_ | Optional JWT claim name for the caller's clearance; when set + present it is used instead of `clearanceHeader`. Needs an upstream JWT Validation policy. |
 | `purposeHeader` | string | `x-dp-purpose` | Request header carrying the caller's declared purpose. |
+| `purposeClaim` | string | _unset_ | Optional JWT claim name for the caller's purpose; when set + present it is used instead of `purposeHeader`. Needs an upstream JWT Validation policy. |
 | `clearedLevels` | string | `restricted` | Comma-separated clearance values entitled to see sensitive fields. |
 | `allowedPurposes` | string | `""` | Comma-separated purposes entitled to see sensitive fields. Empty = purpose not checked. |
 | `maskMode` | enum | `mask` | How a withheld field is rendered (`mask` / `nullify` / `drop`). |
@@ -141,8 +144,20 @@ field-level-entitlement-filter-flex/          # Rust implementation
   src/lib.rs          # CDGC auth + ccgf-searchv2 sensitivity derivation + cache-aside + body projection
   src/entitlement.rs  # PURE: caller entitlement + mask/nullify/drop projection — 11 unit tests
   src/cdgc.rs         # PURE: nonce + cached field-map types
+  src/claims.rs       # PURE: decode caller Bearer-JWT claims (opt-in clearance/purpose/schema source) — unit-tested
 demo/  # dim_product-shaped mock, config (schemaId + entitlement rule), two-persona agent, PROVISION, WALKTHROUGH
 ```
+
+### Sourcing caller claims from a JWT
+
+By default clearance and purpose are read from request headers. Set
+`clearanceClaim` / `purposeClaim` (and optionally `schemaIdClaim`) to read them
+from the caller's Bearer JWT instead — a configured claim wins over its header,
+and if unset or absent the header is used (fully backward compatible). The token
+is only **decoded** here; put a **JWT Validation policy upstream** on the same
+instance to verify the signature/expiry, otherwise the claims are attacker-controlled.
+`schemaIdClaim` is a hardening lever: it binds the caller to a data product via
+the signed token so a spoofed `x-dp-schema-id` header can't redirect the policy.
 
 ---
 
@@ -155,7 +170,9 @@ make build-asset-files && cargo build --target wasm32-wasip1 --release
 cargo test --lib            # 11 pure unit tests
 make release
 ```
-Published at **1.0.0**. Requires **PDK 1.10**.
+Published at **1.1.0** (adds opt-in JWT-claims sourcing for clearance /
+purpose / schema id — see "Sourcing caller claims from a JWT"; header mode
+remains the default). Requires **PDK 1.10**.
 
 ---
 

@@ -17,6 +17,8 @@ pub struct Config {
         deserialize_with = "pdk::serde::deserialize_service"
     )]
     pub cdgc_search_url: pdk::hl::Service,
+    #[serde(alias = "clearanceClaim")]
+    pub clearance_claim: Option<String>,
     #[serde(alias = "clearanceHeader")]
     pub clearance_header: Option<String>,
     #[serde(alias = "clearedLevels")]
@@ -29,6 +31,8 @@ pub struct Config {
     pub mask_mode: Option<String>,
     #[serde(alias = "maskToken")]
     pub mask_token: Option<String>,
+    #[serde(alias = "purposeClaim")]
+    pub purpose_claim: Option<String>,
     #[serde(alias = "purposeHeader")]
     pub purpose_header: Option<String>,
     #[serde(alias = "recordsPath")]
@@ -37,6 +41,8 @@ pub struct Config {
     pub refresh_interval_seconds: Option<i64>,
     #[serde(alias = "schemaId")]
     pub schema_id: String,
+    #[serde(alias = "schemaIdClaim")]
+    pub schema_id_claim: Option<String>,
     #[serde(alias = "schemaIdHeader")]
     pub schema_id_header: Option<String>,
     #[serde(alias = "sensitiveLevels")]
