@@ -7,7 +7,8 @@
 //! masked, nulled, or dropped — before the response reaches the agent.
 //!
 //! The sensitivity map (one entry per governed column, flagged sensitive when its
-//! Business Term description contains the configured marker) is fetched via the CDGC
+//! Business Term's structured Security Level is in `sensitiveLevels` — falling back to
+//! a description substring marker only for terms with no level) is fetched via the CDGC
 //! Login→JWT→ccgf-searchv2 chain and cached (lazy refresh, single-flight). Governed
 //! by the same `format:service` egress + `HttpClient` pattern as the sibling
 //! metadata-injection and conformance-guard policies.
@@ -56,6 +57,10 @@ const DEFAULT_REFRESH_INTERVAL_SECONDS: i64 = 86_400;
 const SEARCH_PATH: &str = "/ccgf-searchv2/api/v1/search";
 const CT_FLATFIELD: &str = "com.infa.odin.models.file.flat.FlatField";
 const REL_TECH_GLOSSARY: &str = "com.infa.ccgf.models.governance.IClassTechnicalGlossaryBase";
+// The structured IDMC "Security Level" classification on a Business Term
+// (Public | Internal | Confidential | Restricted) — the primary sensitivity signal.
+const ATTR_SECURITY_CLASS: &str = "com.infa.ccgf.models.governance.securityClassification";
+const DEFAULT_SENSITIVE_LEVELS: &str = "confidential,restricted";
 const DEFAULT_SENSITIVE_MARKER: &str = "confidential";
 const DEFAULT_CLEARANCE_HEADER: &str = "x-dp-clearance";
 const DEFAULT_PURPOSE_HEADER: &str = "x-dp-purpose";
@@ -185,7 +190,7 @@ fn s(map: &Value, key: &str) -> Option<String> {
 
 /// Catalog-driven sensitivity map: Login → JWT, then via ccgf-searchv2 resolve the
 /// schema asset, enumerate its columns and their linked Business Terms, and build the
-/// per-field map (name + sensitive[term desc marker] + governing term).
+/// per-field map (name + sensitive[term Security Level, desc-marker fallback] + governing term).
 async fn fetch_field_map(
     client: &HttpClient,
     config: &Config,
@@ -195,6 +200,7 @@ async fn fetch_field_map(
     let start = clock.now();
     let (jwt, org) = cdgc_auth(client, config, clock, start).await?;
     let sens_marker = config.sensitive_marker.as_deref().unwrap_or(DEFAULT_SENSITIVE_MARKER).to_lowercase();
+    let sens_levels = parse_csv_set(config.sensitive_levels.as_deref().unwrap_or(DEFAULT_SENSITIVE_LEVELS));
 
     // 1. Resolve the schema asset → location + identity.
     let files = cdgc_search(client, config, clock, start, &jwt, &org, &json!({
@@ -236,8 +242,8 @@ async fn fetch_field_map(
         }
     }
 
-    // 4. Resolve the linked terms → name / description (for the sensitivity marker).
-    let mut terms: Map<String, Value> = Map::new(); // termId → {name, desc}
+    // 4. Resolve the linked terms → name / Security Level / description (fallback).
+    let mut terms: Map<String, Value> = Map::new(); // termId → {name, desc, level}
     if !term_ids.is_empty() {
         let tdocs = cdgc_search(client, config, clock, start, &jwt, &org, &json!({
             "from":0,"size":5000,"query":{"bool":{"must":[
@@ -249,6 +255,7 @@ async fn fetch_field_map(
                 terms.insert(id, json!({
                     "name": s(t, "core.name"),
                     "desc": s(t, "core.description").unwrap_or_default(),
+                    "level": s(t, ATTR_SECURITY_CLASS).unwrap_or_default(),
                 }));
             }
         }
@@ -263,8 +270,15 @@ async fn fetch_field_map(
         if let Some(Value::String(tid)) = col_to_term.get(&id) {
             if let Some(term) = terms.get(tid) {
                 term_name = term.get("name").and_then(Value::as_str).map(str::to_string);
-                let desc = term.get("desc").and_then(Value::as_str).unwrap_or("");
-                sensitive = desc.to_lowercase().contains(&sens_marker);
+                // Primary: the term's structured Security Level classification.
+                // Fallback (only when no level is set): the description substring marker.
+                let level = term.get("level").and_then(Value::as_str).unwrap_or("").trim().to_lowercase();
+                sensitive = if level.is_empty() {
+                    let desc = term.get("desc").and_then(Value::as_str).unwrap_or("");
+                    desc.to_lowercase().contains(&sens_marker)
+                } else {
+                    sens_levels.contains(&level)
+                };
             }
         }
         fields.push(GovernedField { name, sensitive, term: term_name });

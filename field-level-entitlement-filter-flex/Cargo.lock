@@ -1226,7 +1226,7 @@ dependencies = [
 
 [[package]]
 name = "field_level_entitlement_filter"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "anyhow",
  "httpmock",
